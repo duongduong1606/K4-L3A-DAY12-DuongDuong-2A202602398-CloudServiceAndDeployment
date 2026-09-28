@@ -1,7 +1,7 @@
 # Thông Tin Deploy — Checkpoint 5
 
-> Bài nộp này dùng phương án dự phòng cục bộ theo hướng dẫn của lab.
-> Tài liệu chỉ ghi tên biến môi trường, không chứa giá trị API key.
+> Service đã được deploy công khai trên Render. Tài liệu này chỉ ghi tên biến
+> môi trường và nguồn cấp, không chứa giá trị API key.
 
 ## Thông Tin Học Viên
 
@@ -15,70 +15,52 @@
 
 | Mục | Nội dung |
 |-----|----------|
-| Public URL | Không có — dùng `http://localhost:8000` theo local fallback |
-| Platform | Docker Compose local fallback; chưa deploy Railway/Render |
-| Ngày kiểm tra | 2026-09-28 |
+| Public URL | https://day12-agent-civg.onrender.com |
+| Platform | Render Blueprint |
+| Ngày deploy và kiểm tra | 2026-09-28 |
 
-## Biến Môi Trường Đã Set
-
-Chỉ liệt kê tên biến và nguồn cấp, không ghi giá trị secret:
+## Biến Môi Trường Đã Set Trên Cloud
 
 | Biến | Đã set | Nguồn |
 |------|--------|-------|
-| `PORT` | ✅ | file `.env` cục bộ |
-| `AGENT_API_KEY` | ✅ | file `.env` cục bộ, không commit |
-| `REDIS_URL` | ✅ | Compose ghi đè thành `redis://redis:6379/0` |
-| `RATE_LIMIT_PER_MINUTE` | ✅ | file `.env` cục bộ |
-| `MONTHLY_BUDGET_USD` | ✅ | file `.env` cục bộ |
-| `LOG_LEVEL` | ✅ | file `.env` cục bộ |
-| `LOCAL_FALLBACK` | ✅ | `true` trong file `.env` cục bộ |
+| `PORT` | ✅ | Render tự gán |
+| `AGENT_API_KEY` | ✅ | Render secret, không nằm trong repo |
+| `REDIS_URL` | ✅ | Render Key Value `day12-redis` cấp connection string |
+| `RATE_LIMIT_PER_MINUTE` | ✅ | `render.yaml` |
+| `MONTHLY_BUDGET_USD` | ✅ | `render.yaml` |
+| `LOG_LEVEL` | ✅ | `render.yaml` |
 
 ## Lệnh Kiểm Tra
 
 ```bash
-curl -i http://localhost:8000/health
-curl -i http://localhost:8000/ready
-curl -i -X POST http://localhost:8000/ask \
+URL=https://day12-agent-civg.onrender.com
+
+curl -i "$URL/health"
+curl -i "$URL/ready"
+curl -i -X POST "$URL/ask" \
   -H "Content-Type: application/json" \
   -d '{"question":"Hello"}'
 ```
 
-Request có xác thực và kiểm tra rate limit được chạy bằng API key lấy từ
-`.env`; giá trị khóa không được in ra terminal hoặc ghi vào tài liệu này.
-
 ## Kết Quả Chạy Thật
 
-Kiểm tra ngày 2026-09-28:
+Kiểm tra từ máy local ngày 2026-09-28:
 
 ```text
-docker compose ps
-agent: running, healthy, 0.0.0.0:8000->8000/tcp
-redis: running, healthy, 0.0.0.0:6379->6379/tcp
-
-GET /health
+GET https://day12-agent-civg.onrender.com/health
 HTTP 200 {"status":"ok","service":"day12-agent","version":"1.0.0"}
 
-GET /ready
+GET https://day12-agent-civg.onrender.com/ready
 HTTP 200 {"status":"ready","redis":true}
 
-POST /ask không có X-API-Key
-HTTP 401
-
-POST /ask có X-API-Key
-HTTP 200, answer_present=true
-
-15 request liên tiếp với cùng user
-200 200 200 200 200 200 200 200 200 200 429 429 429 429 429
+POST https://day12-agent-civg.onrender.com/ask không có X-API-Key
+HTTP 401 {"detail":"invalid or missing API key"}
 ```
+
+Kết quả chứng minh service HTTPS hoạt động, app kết nối được Render Key Value
+và endpoint `/ask` không cho request chưa xác thực đi qua.
 
 ## Ảnh Chụp Màn Hình
 
-- `screenshots/health.png` — phản hồi thật của `/health` trong trình duyệt.
-- `screenshots/ready.png` — phản hồi thật của `/ready`, xác nhận Redis hoạt động.
-
-## Lý Do Dùng Phương Án Dự Phòng
-
-Môi trường làm bài không có Railway/Render CLI và không có phiên trình duyệt
-cloud đã đăng nhập. Vì không thể deploy công khai mà không yêu cầu thêm tài
-khoản hoặc credential, bài dùng phương án Docker Compose local fallback theo
-hướng dẫn chính thức. CP5 vì vậy bị giới hạn tối đa 9/15 điểm.
+- `screenshots/health.png` — phản hồi `/health` từ URL Render công khai.
+- `screenshots/ready.png` — phản hồi `/ready` từ URL Render công khai.
